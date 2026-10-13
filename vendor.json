@@ -1,0 +1,167 @@
+{
+  "packages": [
+    {
+      "name": "pi",
+      "url": "https://github.com/earendil-works/pi",
+      "track": "main",
+      "base": "abe508e1b89912adde45528136c3221eb69acdd7",
+      "version": "v1.1.0",
+      "core": true
+    },
+    {
+      "name": "pi-packages",
+      "url": "https://github.com/gotgenes/pi-packages",
+      "track": "main",
+      "base": "c8f89b5e76d2ba61a2e46b233d8bebbe55f8c4ff",
+      "version": "pi-permission-system-v40.2.0",
+      "extensions": [
+        {
+          "id": "pi-permission-system",
+          "path": "packages/pi-permission-system"
+        }
+      ]
+    },
+    {
+      "name": "pi-better-harness",
+      "url": "https://github.com/1aboveio/pi-better-harness",
+      "track": "main",
+      "base": "cfd14abf98f05bb83187e12f10d6c9e8a14d48cd",
+      "version": "pi-better-harness@0.28.2",
+      "extensions": [
+        {
+          "id": "pi-better-sandbox",
+          "path": "packages/pi-better-sandbox",
+          "install": false
+        },
+        {
+          "id": "pi-better-subagents",
+          "path": "packages/pi-better-subagents",
+          "install": false
+        },
+        {
+          "id": "pi-better-background-tasks",
+          "path": "packages/pi-better-background-tasks",
+          "install": false
+        },
+        {
+          "id": "pi-better-ssh",
+          "path": "packages/pi-better-ssh",
+          "install": false
+        },
+        {
+          "id": "pi-better-goal",
+          "path": "packages/pi-better-goal",
+          "install": false
+        },
+        {
+          "id": "pi-better-plan",
+          "path": "packages/pi-better-plan",
+          "install": false
+        },
+        {
+          "id": "pi-better-harness",
+          "path": "packages/pi-better-harness",
+          "local": {
+            "pi-better-sandbox": "pi-better-sandbox",
+            "pi-better-subagents": "pi-better-subagents",
+            "pi-better-background-tasks": "pi-better-background-tasks",
+            "pi-better-ssh": "pi-better-ssh",
+            "pi-better-goal": "pi-better-goal",
+            "pi-better-plan": "pi-better-plan"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pi-web-access",
+      "url": "https://github.com/nicobailon/pi-web-access",
+      "track": "main",
+      "base": "9861ad72a11c9af419b39f9b00860708407f7025",
+      "version": "v0.40.0",
+      "extensions": [
+        {
+          "id": "pi-web-access"
+        }
+      ]
+    },
+    {
+      "name": "pi-mcp-adapter",
+      "url": "https://github.com/nicobailon/pi-mcp-adapter",
+      "track": "main",
+      "base": "1cf56829ce84df38d06022f466793c773d0132a9",
+      "version": "v5.3.0",
+      "extensions": [
+        {
+          "id": "pi-mcp-adapter"
+        }
+      ]
+    },
+    {
+      "name": "pi-lens",
+      "url": "https://github.com/apmantza/pi-lens",
+      "track": "master",
+      "base": "db92612cf0d984a47c9afeb5338c44f1a30747b9",
+      "version": "v4.4.3",
+      "extensions": [
+        {
+          "id": "pi-lens",
+          "build": true
+        }
+      ]
+    },
+    {
+      "name": "pi-claude-bridge",
+      "url": "https://github.com/elidickinson/pi-claude-bridge",
+      "track": "main",
+      "base": "874fa7c2678456336f23b64e784e2057e608d83e",
+      "version": "v0.9.3",
+      "extensions": [
+        {
+          "id": "pi-claude-bridge"
+        }
+      ]
+    },
+    {
+      "name": "pi-multi-pass",
+      "url": "https://github.com/tegonzalez/pi-multi-pass",
+      "track": "main",
+      "base": "25d239bb2121feb460060495e5533a3a5761e6c8",
+      "version": "v1.6.0",
+      "extensions": [
+        {
+          "id": "pi-multi-pass"
+        }
+      ]
+    },
+    {
+      "name": "agent-stuff",
+      "url": "https://github.com/tegonzalez/agent-stuff",
+      "track": "main",
+      "base": "b7c45d67c634d361d67340789a02f64ffb9e16f1",
+      "version": "1.6.0",
+      "extensions": [
+        {
+          "id": "mitsupi"
+        }
+      ]
+    },
+    {
+      "name": "pi-subagents",
+      "url": "https://github.com/nicobailon/pi-subagents",
+      "track": "main",
+      "base": "a4c8ced69a8176cdf4179b127feddc8875e3418f",
+      "version": "v0.78.0",
+      "extensions": [],
+      "note": "reference only — not in the stack; see docs/stack.md"
+    },
+    {
+      "name": "pi-dynamic-workflows",
+      "url": "https://github.com/Michaelliv/pi-dynamic-workflows",
+      "track": "main",
+      "base": "dbc6800d1f725f7439e51705e2664c59484afcd1",
+      "version": "v1.0.1",
+      "extensions": [],
+      "note": "reference only — not in the stack; see docs/stack.md"
+    }
+  ]
+}
