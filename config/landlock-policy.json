@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "handled": [
+    "read_file",
+    "write_file",
+    "read_dir",
+    "remove_dir",
+    "remove_file",
+    "make_dir",
+    "make_reg",
+    "make_sym",
+    "refer",
+    "truncate",
+    "execute"
+  ],
+  "rules": [
+    {
+      "path": "{{WORKSPACE}}",
+      "access": [
+        "read_file",
+        "write_file",
+        "read_dir",
+        "remove_dir",
+        "remove_file",
+        "make_dir",
+        "make_reg",
+        "make_sym",
+        "refer",
+        "truncate",
+        "execute"
+      ]
+    },
+    {
+      "path": "/tmp",
+      "access": [
+        "read_file",
+        "write_file",
+        "read_dir",
+        "remove_dir",
+        "remove_file",
+        "make_dir",
+        "make_reg",
+        "make_sym",
+        "refer",
+        "truncate",
+        "execute"
+      ]
+    },
+    {
+      "path": "/dev/shm",
+      "access": [
+        "read_file",
+        "write_file",
+        "read_dir",
+        "remove_dir",
+        "remove_file",
+        "make_dir",
+        "make_reg",
+        "make_sym",
+        "refer",
+        "truncate",
+        "execute"
+      ]
+    },
+    {
+      "path": "/usr",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "/lib",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "/bin",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "/etc",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "/proc",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "/dev",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "{{NODE_PREFIX}}",
+      "access": ["read_file", "read_dir", "execute"]
+    },
+    {
+      "path": "{{PI_EXECUTABLE}}",
+      "access": ["read_file", "execute"]
+    },
+    {
+      "path": "{{PI_PACKAGE_JSON}}",
+      "access": ["read_file"]
+    },
+    {
+      "path": "{{PI_CLI_RUNTIME}}",
+      "access": ["read_file"]
+    }
+  ]
+}

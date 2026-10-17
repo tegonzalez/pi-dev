@@ -18,11 +18,14 @@
 .DEFAULT_GOAL := all
 
 NPM     ?= npm
+CC      ?= cc
+CFLAGS  ?= -O2 -Wall -Wextra -Wpedantic
 VENDOR  := node $(CURDIR)/tools/vendor.js
 PI_HOME := $(HOME)/.pi
 # Where the built pi CLI is linked; must be on PATH.
 BIN_DIR ?= $(HOME)/.local/bin
 PI      := $(BIN_DIR)/pi
+LL_PI   := $(CURDIR)/build/ll-pi
 
 # Minimum supported core version: >= 0.82 baseline for the provider stack,
 # >= 0.58.5 mandatory for the CVE-2026-5556 extension-loader fix.
@@ -58,8 +61,12 @@ vendor-update: ## Fast-forward upstream, re-pin vendor.json, rebase pi-dev (PKG=
 
 # --- build ------------------------------------------------------------------------
 
-build: ## Build pi + every extension from committed pi-dev trees (incremental)
+build: $(LL_PI) ## Build pi + every extension from committed pi-dev trees (incremental)
 	@$(VENDOR) build
+
+$(LL_PI): $(CURDIR)/tools/ll-pi.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -std=c11 -o $@ $<
 
 buildclean: ## Delete build artifacts (next make rebuilds everything)
 	rm -rf $(CURDIR)/build

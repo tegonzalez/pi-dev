@@ -1,0 +1,31 @@
+{
+  "yoloMode": false,
+  "debugLog": false,
+  "permissionReviewLog": true,
+  "authorizerChain": ["{{JUDGE_LINK_NAME}}"],
+  "permission": {
+    "*": "deny",
+    "path": {
+      "*": "deny",
+      "{{WORKSPACE}}/*": "allow",
+      "{{AGENT_DIR}}": "deny",
+      "{{AGENT_DIR}}/*": "deny",
+      "*/auth.json": "deny",
+      "auth.json": "deny",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "~/.ssh/*": "deny"
+    },
+    "external_directory": "deny",
+    "read": "ask",
+    "write": {
+      "*": "deny",
+      "{{WORKSPACE}}/*": "allow"
+    },
+    "edit": {
+      "*": "deny",
+      "{{WORKSPACE}}/*": "allow"
+    },
+    "bash": "ask"
+  }
+}
