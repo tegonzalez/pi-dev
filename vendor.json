@@ -4,16 +4,16 @@
       "name": "pi",
       "url": "https://github.com/earendil-works/pi",
       "track": "main",
-      "base": "abe508e1b89912adde45528136c3221eb69acdd7",
-      "version": "v1.1.0",
+      "base": "71023aec1546d6d677a65669c5665c0927ce0dd0",
+      "version": "v1.3.0",
       "core": true
     },
     {
       "name": "pi-packages",
       "url": "https://github.com/gotgenes/pi-packages",
       "track": "main",
-      "base": "c8f89b5e76d2ba61a2e46b233d8bebbe55f8c4ff",
-      "version": "pi-permission-system-v40.2.0",
+      "base": "a4f9e2418e3d4fb68f8b0fc8c69b0cd09805371a",
+      "version": "pi-permission-system-v40.2.2",
       "extensions": [
         {
           "id": "pi-permission-system",
@@ -25,8 +25,8 @@
       "name": "pi-better-harness",
       "url": "https://github.com/1aboveio/pi-better-harness",
       "track": "main",
-      "base": "cfd14abf98f05bb83187e12f10d6c9e8a14d48cd",
-      "version": "pi-better-harness@0.28.2",
+      "base": "9b3578187c315fb026270f8e4dcb9003b09df114",
+      "version": "pi-better-harness@0.30.0",
       "extensions": [
         {
           "id": "pi-better-sandbox",
@@ -76,8 +76,8 @@
       "name": "pi-web-access",
       "url": "https://github.com/nicobailon/pi-web-access",
       "track": "main",
-      "base": "9861ad72a11c9af419b39f9b00860708407f7025",
-      "version": "v0.40.0",
+      "base": "d47dc040552505e3b135d0136a0b15eaf4bdba52",
+      "version": "v0.41.0",
       "extensions": [
         {
           "id": "pi-web-access"
@@ -88,8 +88,8 @@
       "name": "pi-mcp-adapter",
       "url": "https://github.com/nicobailon/pi-mcp-adapter",
       "track": "main",
-      "base": "1cf56829ce84df38d06022f466793c773d0132a9",
-      "version": "v5.3.0",
+      "base": "574bee1f4fc5d2676b32a95f97a58f2402c01633",
+      "version": "v5.3.1",
       "extensions": [
         {
           "id": "pi-mcp-adapter"
@@ -125,8 +125,9 @@
       "name": "pi-multi-pass",
       "url": "https://github.com/tegonzalez/pi-multi-pass",
       "track": "main",
-      "base": "25d239bb2121feb460060495e5533a3a5761e6c8",
-      "version": "v1.6.0",
+      "follow": "head",
+      "base": "8c8c0476ae4e945224a0dfa62a7c09f6d129e9c5",
+      "version": "8c8c047",
       "extensions": [
         {
           "id": "pi-multi-pass"
@@ -137,8 +138,9 @@
       "name": "agent-stuff",
       "url": "https://github.com/tegonzalez/agent-stuff",
       "track": "main",
-      "base": "b7c45d67c634d361d67340789a02f64ffb9e16f1",
-      "version": "1.6.0",
+      "follow": "head",
+      "base": "0865c849befd2021490679f96a8dee58c84ac857",
+      "version": "0865c84",
       "extensions": [
         {
           "id": "mitsupi"

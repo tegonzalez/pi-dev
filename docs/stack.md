@@ -16,7 +16,7 @@ pi v1.1.0 and the pins in `vendor.json`; all file references are relative to
 | Policy (allow/ask/deny) | **@gotgenes/pi-permission-system** | — | Complementary to the sandbox; first `tool_call` block wins (`pi/packages/coding-agent/src/core/extensions/runner.ts`), and it gates the sandbox's replacement tools by name like any other. |
 | OS confinement | **pi-better-sandbox** | — | Kernel-level (bubblewrap / Seatbelt) write + network confinement; permission-system is userland only. |
 | Backlog todos vs session plan | mitsupi `todo` **and** pi-better-plan | — | Cross-session file-backed backlog vs live per-session checklist; no name clash. Say which to use in prompts. |
-| Tool/editor overrides | pi-better-sandbox's guarded `edit`/`bash`, the pi-better navigator | mitsupi `multi-edit.ts`, `uv.ts`, `prompt-editor.ts` | Duplicate tools: first registered wins silently; with the sandbox on, mitsupi's copies are blocked as unverified replacements. Excluded in `agent-stuff` `pi-dev` (commit "exclude tool and editor overrides that pi-better-harness owns"). |
+| Tool/editor overrides | pi-better-sandbox's guarded `edit`/`bash`, pi-better-goal, the pi-better navigator | mitsupi `unified-edit.ts`, `uv.ts`, `goal.ts`, `prompt-editor.ts` | Duplicate tools fail extension load (`edit`, `bash`, `get_goal`, `update_goal`). Excluded in `agent-stuff` `pi-dev` via `!` patterns in `package.json`. |
 
 ### pi-dynamic-workflows is not what the docs said
 

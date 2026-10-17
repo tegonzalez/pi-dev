@@ -45,17 +45,25 @@ promoted to submodules (`make vendor-status`, column `ours`).
 
 ```sh
 make vendor-status                     # pins, our commits, dirty, upstream lag
+make deps                              # pin vs latest release (forks: origin HEAD)
 cd vendor/<name> && <edit> && git commit   # on pi-dev — builds use commits only
 make install                           # incremental rebuild + reinstall + verify
 
-make vendor-update PKG=<name>          # ff upstream to origin/<track>, re-pin, rebase pi-dev
-make vendor-update PKG=<name> TO=v1.2.0   # …or to a specific tag/commit
+make deps-update                       # move every stack pin to its follow target
+make vendor-update PKG=<name>          # one package: latest release, or fork HEAD
+make vendor-update PKG=<name> TO=v1.2.0   # …or a specific tag/commit
 make install
 ```
 
-`vendor-update` moves `upstream` fast-forward only, writes the new pin into
-`vendor.json` (commit that), then rebases `pi-dev`. On a conflict it stops
-inside the rebase; resolve, `git rebase --continue`, `make install`.
+Pins do not stay at the commit `make` first cloned. `make deps` fetches and
+compares each package to its follow target: the newest release tag with the
+same prefix as the current pin (pi core asks `https://pi.dev/api/latest-version`,
+the same endpoint `pi update` uses), or `origin/<track>` when `vendor.json`
+sets `"follow": "head"` (the tegonzalez forks). `deps-update` /
+`vendor-update` move `upstream` fast-forward only, write the new pin into
+`vendor.json` (commit that), then rebase `pi-dev` (`--empty=drop`, so a patch
+already in the release disappears). On a conflict it stops inside the rebase;
+resolve, `git rebase --continue`, `make install`.
 
 ## Build model
 
@@ -103,8 +111,9 @@ Published on forks under `tegonzalez/` (see `vendor.json` `url`). Fresh
 
 | Package | Fork | Commit |
 |---|---|---|
+| `pi` | upstream pin (local `pi-dev`) | allow `google-generative-ai` in OpenCode Go so live model-catalog hydration typechecks on the v1.1.0 pin |
 | `pi-multi-pass` | [tegonzalez/pi-multi-pass](https://github.com/tegonzalez/pi-multi-pass) | Claude usage checkers for `/subs limits` (usage API, inference-probe fallback for inference-scoped tokens) |
-| `agent-stuff` | [tegonzalez/agent-stuff](https://github.com/tegonzalez/agent-stuff) | exclude `files.ts` (`ctrl+shift+f` clash with the TUI search) and `multi-edit.ts` / `uv.ts` / `prompt-editor.ts` (duplicate `edit`/`bash`/editor that pi-better-harness owns) |
+| `agent-stuff` | [tegonzalez/agent-stuff](https://github.com/tegonzalez/agent-stuff) | exclude `goal.ts`, `unified-edit.ts`, `uv.ts`, and `prompt-editor.ts` (duplicate `get_goal`/`update_goal`, `edit`, `bash`, and editor that pi-better-harness owns) |
 
 `make vendor-status` is the live list.
 

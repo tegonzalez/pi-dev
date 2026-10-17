@@ -16,8 +16,11 @@
 //   sync              clone missing repos; check upstream == base and that
 //                     pi-dev sits on top of upstream
 //   status [--fetch]  pin, our commits, checkout/dirty state, upstream lag
-//   update name...    fetch, ff upstream to origin/<track> (or --to <ref>),
-//                     re-pin vendor.json, rebase pi-dev onto it
+//   check             fetch; compare each pin to its follow target
+//                     (release = latest tag, same way pi asks pi.dev;
+//                      head = origin/<track>, used by tegonzalez forks)
+//   update name...    ff upstream to that target (or --to <ref>), re-pin, rebase
+//   latest [name...]  update every stack package (skip reference-only clones)
 //   build [id...]     build/<id> from pi-dev; rebuilds only when pi-dev moved
 //   paths             absolute build paths of the extension stack, install order
 //                     (extensions with "install": false are build-only inputs)
@@ -67,6 +70,85 @@ function writeManifest() {
 function select(names) {
   if (names.length === 0) return manifest.packages;
   return names.map((n) => manifest.packages.find((p) => p.name === n) ?? die(`unknown package: ${n}`));
+}
+
+function inStack(pkg) {
+  return Boolean(pkg.core || (pkg.extensions ?? []).length > 0);
+}
+
+// tegonzalez forks follow origin/<track>. Everything else follows the newest
+// release tag with the same prefix as the current pin (v1.2.3, name-v1.2.3,
+// name@1.2.3). pi core asks https://pi.dev/api/latest-version first — the
+// same endpoint `pi update` uses — then resolves that version to a tag.
+function followKind(pkg) {
+  if (pkg.follow === "head" || pkg.follow === "release") return pkg.follow;
+  return /github\.com\/tegonzalez\//.test(pkg.url) ? "head" : "release";
+}
+
+function parseSemver(text) {
+  const match = String(text).match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function cmpSemver(left, right) {
+  for (let i = 0; i < 3; i++) if (left[i] !== right[i]) return left[i] - right[i];
+  return 0;
+}
+
+function releasePrefix(version) {
+  const match = String(version).match(/^(.*?)(\d+\.\d+\.\d+)$/);
+  return match ? match[1] : "";
+}
+
+function latestReleaseTag(dir, version) {
+  const prefix = releasePrefix(version);
+  let best = null;
+  let bestSemver = null;
+  for (const tag of git(dir, "tag", "-l").split("\n").filter(Boolean)) {
+    if (prefix ? !tag.startsWith(prefix) : tag.startsWith("v")) continue;
+    const semver = parseSemver(prefix ? tag.slice(prefix.length) : tag);
+    if (!semver) continue;
+    if (!bestSemver || cmpSemver(semver, bestSemver) > 0) {
+      best = tag;
+      bestSemver = semver;
+    }
+  }
+  return best;
+}
+
+function piApiVersion() {
+  const r = spawnSync("curl", ["-fsS", "--max-time", "10", "https://pi.dev/api/latest-version"], { encoding: "utf-8" });
+  if (r.status !== 0) return null;
+  try {
+    const version = JSON.parse(r.stdout).version;
+    return typeof version === "string" && version.trim() ? version.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Returns { label, sha } or { error }.
+function followTarget(pkg, dir) {
+  if (followKind(pkg) === "head") {
+    const ref = `origin/${pkg.track}`;
+    if (!gitOk(dir, "rev-parse", "-q", "--verify", `${ref}^{commit}`)) return { error: `no ${ref}` };
+    return { label: ref, sha: git(dir, "rev-parse", `${ref}^{commit}`) };
+  }
+  if (pkg.core) {
+    const version = piApiVersion();
+    if (version) {
+      const tag = gitOk(dir, "rev-parse", "-q", "--verify", `refs/tags/v${version}^{commit}`)
+        ? `v${version}`
+        : gitOk(dir, "rev-parse", "-q", "--verify", `refs/tags/${version}^{commit}`)
+          ? version
+          : null;
+      if (tag) return { label: tag, sha: git(dir, "rev-parse", `${tag}^{commit}`) };
+    }
+  }
+  const tag = latestReleaseTag(dir, pkg.version);
+  if (!tag) return { error: "no release tag" };
+  return { label: tag, sha: git(dir, "rev-parse", `${tag}^{commit}`) };
 }
 
 function extensions() {
@@ -145,27 +227,77 @@ function status(fetch) {
 
 // --- update ---------------------------------------------------------------------
 
+function fetchOrigin(dir) {
+  git(dir, "fetch", "-q", "--tags", "origin");
+}
+
+function relation(dir, from, to) {
+  if (from === to) return "current";
+  if (gitOk(dir, "merge-base", "--is-ancestor", from, to)) return "behind";
+  if (gitOk(dir, "merge-base", "--is-ancestor", to, from)) return "ahead";
+  return "diverged";
+}
+
+function check() {
+  const rows = [["package", "follow", "pin", "latest", "state"]];
+  for (const pkg of manifest.packages) {
+    const dir = repoDir(pkg);
+    const kind = followKind(pkg);
+    if (!existsSync(join(dir, ".git"))) {
+      rows.push([pkg.name, kind, pkg.version, "-", "MISSING"]);
+      continue;
+    }
+    try {
+      fetchOrigin(dir);
+    } catch {
+      rows.push([pkg.name, kind, pkg.version, "-", "fetch failed"]);
+      continue;
+    }
+    const target = followTarget(pkg, dir);
+    if (target.error) {
+      rows.push([pkg.name, kind, pkg.version, "-", target.error]);
+      continue;
+    }
+    const pin = gitOk(dir, "rev-parse", "-q", "--verify", "refs/heads/upstream")
+      ? git(dir, "rev-parse", "upstream")
+      : pkg.base;
+    const state = relation(dir, pin, target.sha);
+    const behind = state === "behind" ? `behind ${git(dir, "rev-list", "--count", `${pin}..${target.sha}`)}` : state;
+    rows.push([pkg.name, kind, pkg.version, target.label, behind]);
+  }
+  const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
+  for (const r of rows) console.log(r.map((c, i) => c.padEnd(widths[i])).join("  ").trimEnd());
+  const behind = rows.slice(1).filter((r) => r[4].startsWith("behind")).length;
+  console.log(behind === 0 ? "\ndeps: every pin matches its follow target" : `\ndeps: ${behind} package(s) behind — make deps-update`);
+}
+
 function update(pkg, toRef) {
   const dir = repoDir(pkg);
   sync(pkg);
   if (git(dir, "symbolic-ref", "--short", "HEAD") !== "pi-dev") die(`vendor/${pkg.name}: check out pi-dev first`);
   if (git(dir, "status", "--porcelain", "--untracked-files=no")) die(`vendor/${pkg.name}: commit or stash changes first`);
-  git(dir, "fetch", "-q", "--tags", "origin");
+  fetchOrigin(dir);
   const old = git(dir, "rev-parse", "upstream");
-  const target = git(dir, "rev-parse", `${toRef ?? `origin/${pkg.track}`}^{commit}`);
+  const resolved = toRef
+    ? { label: toRef, sha: git(dir, "rev-parse", `${toRef}^{commit}`) }
+    : followTarget(pkg, dir);
+  if (resolved.error) die(`vendor/${pkg.name}: ${resolved.error}`);
+  const target = resolved.sha;
   if (target === old) {
     console.log(`${pkg.name}: up to date (${pkg.version})`);
     return;
   }
   if (!gitOk(dir, "merge-base", "--is-ancestor", old, target)) {
-    die(`vendor/${pkg.name}: ${toRef ?? `origin/${pkg.track}`} is not a fast-forward of upstream`);
+    die(`vendor/${pkg.name}: ${resolved.label} is not a fast-forward of upstream`);
   }
   git(dir, "update-ref", "refs/heads/upstream", target, old);
   pkg.base = target;
-  pkg.version = git(dir, "describe", "--tags", "--always", target);
+  pkg.version = followKind(pkg) === "release" && !toRef
+    ? resolved.label
+    : git(dir, "describe", "--tags", "--always", target);
   writeManifest();
   console.log(`${pkg.name}: upstream ${old.slice(0, 12)} -> ${target.slice(0, 12)} (${pkg.version}); rebasing pi-dev`);
-  const r = spawnSync("git", ["-C", dir, "rebase", "-q", "--onto", "upstream", old, "pi-dev"], { stdio: "inherit" });
+  const r = spawnSync("git", ["-C", dir, "rebase", "-q", "--empty=drop", "--onto", "upstream", old, "pi-dev"], { stdio: "inherit" });
   if (r.status !== 0) {
     die(`vendor/${pkg.name}: rebase stopped on a conflict — resolve it, then git -C vendor/${pkg.name} rebase --continue`);
   }
@@ -280,10 +412,17 @@ switch (cmd) {
   case "status":
     status(rest.includes("--fetch"));
     break;
+  case "check":
+    check();
+    break;
   case "update":
-    if (args.length === 0) die("update: name the package(s) — moving a pin is a deliberate act");
+    if (args.length === 0) die("update: name the package(s) — or use `latest` for the whole stack");
     if (toRef && args.length !== 1) die("--to needs exactly one package name");
     for (const pkg of select(args)) update(pkg, toRef);
+    break;
+  case "latest":
+    if (toRef) die("latest does not take --to; use update <name> --to <ref>");
+    for (const pkg of select(args).filter((pkg) => args.length > 0 || inStack(pkg))) update(pkg);
     break;
   case "build":
     build(args);
@@ -295,5 +434,5 @@ switch (cmd) {
     console.log(piBin);
     break;
   default:
-    die("usage: vendor.js sync|status [--fetch]|update name... [--to ref]|build [id...]|paths|pi-bin");
+    die("usage: vendor.js sync|status [--fetch]|check|update name... [--to ref]|latest [name...]|build [id...]|paths|pi-bin");
 }

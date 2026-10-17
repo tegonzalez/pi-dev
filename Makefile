@@ -36,7 +36,7 @@ MIN_PI_VERSION := 0.82.0
 # records the source verbatim, and verify/uninstall match on that string.
 EXTENSIONS = $(shell $(VENDOR) paths)
 
-.PHONY: all help vendor vendor-status vendor-update build buildclean install-pi \
+.PHONY: all help vendor vendor-status deps deps-update vendor-update build buildclean install-pi \
         install models auth-import auth-status setup verify \
         uninstall purge clean distclean reinstall test list
 
@@ -54,9 +54,18 @@ vendor: ## Clone missing vendor/ repos; check pins and pi-dev branches
 vendor-status: ## Pin, our commits, dirty state, and upstream lag per package
 	@$(VENDOR) status --fetch
 
-# PKG="a b" names the packages (required); TO=<ref> (with one PKG) targets a
-# tag/commit instead of the upstream branch head. Then: make install.
-vendor-update: ## Fast-forward upstream, re-pin vendor.json, rebase pi-dev (PKG=.. [TO=..])
+deps: ## Compare every pin to latest release (tegonzalez forks: origin HEAD)
+	@$(VENDOR) check
+
+# PKG="a b" limits the set. Reference-only clones are skipped unless named.
+# Then: make install.
+deps-update: ## Move stack pins to latest release or fork HEAD, rebase pi-dev
+	@$(VENDOR) latest $(PKG)
+
+# PKG="a b" names the packages (required); TO=<ref> (with one PKG) overrides
+# the follow target. Default target is the latest release tag, or origin/<track>
+# for packages with "follow": "head". Then: make install.
+vendor-update: ## Fast-forward one pin to its follow target (PKG=.. [TO=..])
 	@$(VENDOR) update $(PKG) $(if $(TO),--to $(TO))
 
 # --- build ------------------------------------------------------------------------

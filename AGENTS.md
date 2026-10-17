@@ -28,10 +28,13 @@ Every package — pi core included — is potentially a fork. There is no separa
    decision and is never part of the task. "Upstream it" is not a deliverable.
 2. **Commits, not patch files.** No patch lanes, no build-time diffs. Builds
    read the committed `pi-dev` tree, so uncommitted work is never installed.
-3. **Updating = ff + rebase.** `make vendor-update PKG=<name>` fast-forwards
-   `upstream` to `origin/<track>` (or `TO=<ref>`), re-pins `vendor.json`, and
-   rebases `pi-dev` onto it. Never merge upstream into `pi-dev`; never move
-   `upstream` non-fast-forward.
+3. **Updating = ff + rebase.** Pins track a follow target, not the clone-time
+   commit. `make deps` reports drift. `make deps-update` (or
+   `make vendor-update PKG=<name>`) fast-forwards `upstream` to that target —
+   newest release tag, or `origin/<track>` when `"follow": "head"` — re-pins
+   `vendor.json`, and rebases `pi-dev` onto it. `TO=<ref>` overrides one
+   package. Never merge upstream into `pi-dev`; never move `upstream`
+   non-fast-forward.
 4. **Change the layer that owns the behavior.** Core CLI/TUI behavior goes in
    `vendor/pi`; provider quirks go in the owning provider extension's repo;
    diagnostics/automation go in `tools/`. Never route around the owning layer
