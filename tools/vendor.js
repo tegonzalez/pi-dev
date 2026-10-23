@@ -243,9 +243,23 @@ function relation(dir, from, to) {
   return "diverged";
 }
 
-// Commits on `local` with no patch-equivalent on `target` (git cherry "+").
+// Our commits (upstream..local) with no patch-equivalent on `target` (git cherry "+").
 function uniqueCommits(dir, target, local) {
-  return git(dir, "cherry", target, local).split("\n").filter((l) => l.startsWith("+")).length;
+  return git(dir, "cherry", target, local, "upstream").split("\n").filter((l) => l.startsWith("+")).length;
+}
+
+// Where a published pi-dev branches off origin/<track>, and whether that is at
+// or past the current pin (a fork branch based on an older upstream would
+// move the pin backwards).
+function forkPoint(pkg, dir, target) {
+  const track = `origin/${pkg.track}`;
+  const base = spawnSync("git", ["-C", dir, "merge-base", target, track], { encoding: "utf-8" }).stdout.trim();
+  if (!base) return { error: `shares no history with ${track}` };
+  const pin = git(dir, "rev-parse", "upstream");
+  if (!gitOk(dir, "merge-base", "--is-ancestor", pin, base)) {
+    return { stale: `branches off ${git(dir, "describe", "--tags", "--always", base)}, behind pin ${pkg.version}`, base };
+  }
+  return { base };
 }
 
 function check() {
@@ -274,6 +288,11 @@ function check() {
     const pin = gitOk(dir, "rev-parse", "-q", "--verify", `refs/heads/${local}`)
       ? git(dir, "rev-parse", local)
       : pkg.base;
+    const fork = kind === "pi-dev" ? forkPoint(pkg, dir, target.sha) : {};
+    if (fork.error || fork.stale) {
+      rows.push([pkg.name, kind, pkg.version, target.label, `stale: ${fork.error ?? fork.stale}`]);
+      continue;
+    }
     const state = relation(dir, pin, target.sha);
     const behind =
       state === "behind"
@@ -337,6 +356,15 @@ function pullPiDev(pkg, dir, toRef) {
   const label = toRef ?? "origin/pi-dev";
   if (!gitOk(dir, "rev-parse", "-q", "--verify", `${label}^{commit}`)) die(`vendor/${pkg.name}: no ${label}`);
   const target = git(dir, "rev-parse", `${label}^{commit}`);
+  // Check the fork point first, so a stale branch leaves pi-dev untouched.
+  const fork = forkPoint(pkg, dir, target);
+  if (fork.error) die(`vendor/${pkg.name}: ${label} ${fork.error}`);
+  if (fork.stale) {
+    console.log(
+      `${pkg.name}: skipped — ${label} ${fork.stale}; rebase the fork's pi-dev onto origin/${pkg.track} and push (pi-dev left unchanged)`,
+    );
+    return;
+  }
   const local = git(dir, "rev-parse", "pi-dev");
   const state = relation(dir, local, target);
   if (state === "behind") {
@@ -352,14 +380,9 @@ function pullPiDev(pkg, dir, toRef) {
   }
   if (state !== "current" && state !== "ahead") console.log(`${pkg.name}: pi-dev ${local.slice(0, 12)} -> ${target.slice(0, 12)} (${label})`);
 
-  const track = `origin/${pkg.track}`;
   const old = git(dir, "rev-parse", "upstream");
-  const base = spawnSync("git", ["-C", dir, "merge-base", "pi-dev", track], { encoding: "utf-8" }).stdout.trim();
-  if (!base) die(`vendor/${pkg.name}: pi-dev shares no history with ${track}`);
+  const { base } = fork;
   if (base !== old) {
-    if (!gitOk(dir, "merge-base", "--is-ancestor", old, base)) {
-      die(`vendor/${pkg.name}: pi-dev now branches off ${base.slice(0, 12)}, not a fast-forward of upstream ${old.slice(0, 12)}`);
-    }
     git(dir, "update-ref", "refs/heads/upstream", base, old);
     pkg.base = base;
     pkg.version = git(dir, "describe", "--tags", "--always", base);

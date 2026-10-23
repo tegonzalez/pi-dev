@@ -66,12 +66,14 @@ already in the release disappears). On a conflict it stops inside the rebase;
 resolve, `git rebase --continue`, `make install`.
 
 A fork that publishes our commits on its own `pi-dev` branch sets
-`"follow": "pi-dev"` (`agent-stuff`). There the published branch is the source
+`"follow": "pi-dev"` (`agent-stuff`, `pi-multi-pass`). There the published branch is the source
 of truth: update fast-forwards local `pi-dev` to `origin/pi-dev` and re-pins
 `upstream` to where it branches off `origin/<track>`, without pulling
 `origin/<track>` or rebasing. Moving onto a newer upstream is a rebase on the
 fork, pushed to `pi-dev`; the next `make deps-update` picks it up. Local
-commits not yet pushed are kept (`make deps` reports them as `ahead`).
+commits not yet pushed are kept (`make deps` reports them as `ahead`). A fork
+`pi-dev` based on an upstream older than the pin is reported `stale` and
+skipped, never pulled: rebase it onto `origin/<track>` and push first.
 
 ## Build model
 

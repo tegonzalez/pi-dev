@@ -125,7 +125,7 @@
       "name": "pi-multi-pass",
       "url": "https://github.com/tegonzalez/pi-multi-pass",
       "track": "main",
-      "follow": "head",
+      "follow": "pi-dev",
       "base": "8c8c0476ae4e945224a0dfa62a7c09f6d129e9c5",
       "version": "8c8c047",
       "extensions": [
