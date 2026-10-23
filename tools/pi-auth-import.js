@@ -3,8 +3,9 @@
 // external auth artifacts, so pi never needs its interactive /login:
 //
 //   openai-codex  <- ~/.codex/auth.json (tokens.access_token / refresh_token / account_id)
-//   anthropic     <- nothing to do: pi-claude-bridge's Agent SDK honors
-//                    CLAUDE_CODE_OAUTH_TOKEN / ~/.claude/.credentials.json itself
+//
+// Claude is not imported: pi-claude-bridge spawns Claude Code, which signs in
+// with its own login. See `make auth-status`.
 //
 // Idempotent: an existing entry is only replaced when the source token expires
 // later (fresher). Writes are atomic (tmp + rename) with 0600 perms, mirroring
@@ -95,7 +96,6 @@ function main() {
     chmodSync(authPath, 0o600);
     console.log(`wrote ${authPath}`);
   }
-  console.log("note  anthropic: no import needed — pi-claude-bridge honors CLAUDE_CODE_OAUTH_TOKEN automatically");
 }
 
 main();

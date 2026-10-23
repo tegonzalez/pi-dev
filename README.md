@@ -121,7 +121,7 @@ Published on forks under `tegonzalez/` (see `vendor.json` `url`). Fresh
 
 | Provider | Source artifact | Mechanism |
 |---|---|---|
-| Claude (`pi-claude-bridge`) | `CLAUDE_CODE_OAUTH_TOKEN` or `~/.claude.json` / `~/.claude/.credentials.json` | nothing to seed — the Agent SDK honors it natively |
+| Claude (`pi-claude-bridge`) | Claude Code's own login (`~/.claude/.credentials.json`, or `CLAUDE_CODE_OAUTH_TOKEN`) | nothing to seed — the bridge spawns Claude Code, which signs in by itself |
 | `openai-codex` | `~/.codex/auth.json` (`codex login` once) | `make auth-import` (run by bare `make`) converts tokens (incl. `accountId`) into `~/.pi/agent/auth.json`; pi refreshes under its cross-process lock |
 
 The codex importer ([`tools/pi-auth-import.js`](tools/pi-auth-import.js)) is idempotent and freshness-aware. Codex caveat: alternating the

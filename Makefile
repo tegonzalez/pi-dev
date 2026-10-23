@@ -113,7 +113,7 @@ setup: verify ## Verify install and show post-install steps
 	@echo ""
 	@echo "Auth (no pi /login needed):"
 	@echo "  openai-codex: 'make auth-import' converts ~/.codex/auth.json (run 'codex login' once first)"
-	@echo "  anthropic   : export CLAUDE_CODE_OAUTH_TOKEN — honored automatically by pi-claude-bridge"
+	@echo "  anthropic   : pi-claude-bridge runs Claude Code on its own login (claude /login once) — nothing to seed"
 	@echo ""
 	@echo "Then:"
 	@echo "  pi --list-models        # confirm models are visible"
