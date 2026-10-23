@@ -33,8 +33,10 @@ Every package — pi core included — is potentially a fork. There is no separa
    `make vendor-update PKG=<name>`) fast-forwards `upstream` to that target —
    newest release tag, or `origin/<track>` when `"follow": "head"` — re-pins
    `vendor.json`, and rebases `pi-dev` onto it. `TO=<ref>` overrides one
-   package. Never merge upstream into `pi-dev`; never move `upstream`
-   non-fast-forward.
+   package. With `"follow": "pi-dev"` the fork's published `origin/pi-dev` is
+   the source of truth: `pi-dev` fast-forwards to it and `upstream` re-pins to
+   its fork point; upstream moves by rebasing on the fork and pushing. Never
+   merge upstream into `pi-dev`; never move `upstream` non-fast-forward.
 4. **Change the layer that owns the behavior.** Core CLI/TUI behavior goes in
    `vendor/pi`; provider quirks go in the owning provider extension's repo;
    diagnostics/automation go in `tools/`. Never route around the owning layer

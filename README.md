@@ -45,12 +45,12 @@ promoted to submodules (`make vendor-status`, column `ours`).
 
 ```sh
 make vendor-status                     # pins, our commits, dirty, upstream lag
-make deps                              # pin vs latest release (forks: origin HEAD)
+make deps                              # pin vs latest release (forks: origin HEAD or pi-dev)
 cd vendor/<name> && <edit> && git commit   # on pi-dev — builds use commits only
 make install                           # incremental rebuild + reinstall + verify
 
 make deps-update                       # move every stack pin to its follow target
-make vendor-update PKG=<name>          # one package: latest release, or fork HEAD
+make vendor-update PKG=<name>          # one package: latest release, fork HEAD, or fork pi-dev
 make vendor-update PKG=<name> TO=v1.2.0   # …or a specific tag/commit
 make install
 ```
@@ -64,6 +64,14 @@ sets `"follow": "head"` (the tegonzalez forks). `deps-update` /
 `vendor.json` (commit that), then rebase `pi-dev` (`--empty=drop`, so a patch
 already in the release disappears). On a conflict it stops inside the rebase;
 resolve, `git rebase --continue`, `make install`.
+
+A fork that publishes our commits on its own `pi-dev` branch sets
+`"follow": "pi-dev"` (`agent-stuff`). There the published branch is the source
+of truth: update fast-forwards local `pi-dev` to `origin/pi-dev` and re-pins
+`upstream` to where it branches off `origin/<track>`, without pulling
+`origin/<track>` or rebasing. Moving onto a newer upstream is a rebase on the
+fork, pushed to `pi-dev`; the next `make deps-update` picks it up. Local
+commits not yet pushed are kept (`make deps` reports them as `ahead`).
 
 ## Build model
 

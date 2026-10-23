@@ -138,7 +138,7 @@
       "name": "agent-stuff",
       "url": "https://github.com/tegonzalez/agent-stuff",
       "track": "main",
-      "follow": "head",
+      "follow": "pi-dev",
       "base": "0865c849befd2021490679f96a8dee58c84ac857",
       "version": "0865c84",
       "extensions": [

@@ -18,8 +18,11 @@
 //   status [--fetch]  pin, our commits, checkout/dirty state, upstream lag
 //   check             fetch; compare each pin to its follow target
 //                     (release = latest tag, same way pi asks pi.dev;
-//                      head = origin/<track>, used by tegonzalez forks)
-//   update name...    ff upstream to that target (or --to <ref>), re-pin, rebase
+//                      head = origin/<track>, used by tegonzalez forks;
+//                      pi-dev = origin/pi-dev, forks that publish our commits)
+//   update name...    ff upstream to that target (or --to <ref>), re-pin, rebase;
+//                     pi-dev follow: ff pi-dev to origin/pi-dev, re-pin
+//                     upstream to where it sits on origin/<track>
 //   latest [name...]  update every stack package (skip reference-only clones)
 //   build [id...]     build/<id> from pi-dev; rebuilds only when pi-dev moved
 //   paths             absolute build paths of the extension stack, install order
@@ -76,12 +79,13 @@ function inStack(pkg) {
   return Boolean(pkg.core || (pkg.extensions ?? []).length > 0);
 }
 
-// tegonzalez forks follow origin/<track>. Everything else follows the newest
-// release tag with the same prefix as the current pin (v1.2.3, name-v1.2.3,
-// name@1.2.3). pi core asks https://pi.dev/api/latest-version first — the
-// same endpoint `pi update` uses — then resolves that version to a tag.
+// tegonzalez forks follow origin/<track>, or origin/pi-dev when the fork
+// publishes our commits there ("follow": "pi-dev"). Everything else follows the
+// newest release tag with the same prefix as the current pin (v1.2.3,
+// name-v1.2.3, name@1.2.3). pi core asks https://pi.dev/api/latest-version
+// first — the same endpoint `pi update` uses — then resolves that version to a tag.
 function followKind(pkg) {
-  if (pkg.follow === "head" || pkg.follow === "release") return pkg.follow;
+  if (["head", "release", "pi-dev"].includes(pkg.follow)) return pkg.follow;
   return /github\.com\/tegonzalez\//.test(pkg.url) ? "head" : "release";
 }
 
@@ -130,8 +134,9 @@ function piApiVersion() {
 
 // Returns { label, sha } or { error }.
 function followTarget(pkg, dir) {
-  if (followKind(pkg) === "head") {
-    const ref = `origin/${pkg.track}`;
+  const kind = followKind(pkg);
+  if (kind === "head" || kind === "pi-dev") {
+    const ref = kind === "pi-dev" ? "origin/pi-dev" : `origin/${pkg.track}`;
     if (!gitOk(dir, "rev-parse", "-q", "--verify", `${ref}^{commit}`)) return { error: `no ${ref}` };
     return { label: ref, sha: git(dir, "rev-parse", `${ref}^{commit}`) };
   }
@@ -238,6 +243,11 @@ function relation(dir, from, to) {
   return "diverged";
 }
 
+// Commits on `local` with no patch-equivalent on `target` (git cherry "+").
+function uniqueCommits(dir, target, local) {
+  return git(dir, "cherry", target, local).split("\n").filter((l) => l.startsWith("+")).length;
+}
+
 function check() {
   const rows = [["package", "follow", "pin", "latest", "state"]];
   for (const pkg of manifest.packages) {
@@ -258,11 +268,23 @@ function check() {
       rows.push([pkg.name, kind, pkg.version, "-", target.error]);
       continue;
     }
-    const pin = gitOk(dir, "rev-parse", "-q", "--verify", "refs/heads/upstream")
-      ? git(dir, "rev-parse", "upstream")
+    // pi-dev follow compares our branch to the published one; the others
+    // compare the upstream pin to the follow target.
+    const local = kind === "pi-dev" ? "pi-dev" : "upstream";
+    const pin = gitOk(dir, "rev-parse", "-q", "--verify", `refs/heads/${local}`)
+      ? git(dir, "rev-parse", local)
       : pkg.base;
     const state = relation(dir, pin, target.sha);
-    const behind = state === "behind" ? `behind ${git(dir, "rev-list", "--count", `${pin}..${target.sha}`)}` : state;
+    const behind =
+      state === "behind"
+        ? `behind ${git(dir, "rev-list", "--count", `${pin}..${target.sha}`)}`
+        : state === "ahead" && kind === "pi-dev"
+          ? `ahead ${git(dir, "rev-list", "--count", `${target.sha}..${pin}`)} (push pi-dev)`
+          : state === "diverged" && kind === "pi-dev"
+            ? uniqueCommits(dir, target.sha, pin) === 0
+              ? "behind (fork rebased)"
+              : `diverged (${uniqueCommits(dir, target.sha, pin)} local commit(s) not pushed)`
+            : state;
     rows.push([pkg.name, kind, pkg.version, target.label, behind]);
   }
   const widths = rows[0].map((_, i) => Math.max(...rows.map((r) => r[i].length)));
@@ -277,6 +299,7 @@ function update(pkg, toRef) {
   if (git(dir, "symbolic-ref", "--short", "HEAD") !== "pi-dev") die(`vendor/${pkg.name}: check out pi-dev first`);
   if (git(dir, "status", "--porcelain", "--untracked-files=no")) die(`vendor/${pkg.name}: commit or stash changes first`);
   fetchOrigin(dir);
+  if (followKind(pkg) === "pi-dev") return pullPiDev(pkg, dir, toRef);
   const old = git(dir, "rev-parse", "upstream");
   const resolved = toRef
     ? { label: toRef, sha: git(dir, "rev-parse", `${toRef}^{commit}`) }
@@ -303,6 +326,49 @@ function update(pkg, toRef) {
   }
   const ours = git(dir, "rev-list", "--count", "upstream..pi-dev");
   console.log(`${pkg.name}: pi-dev rebased (${ours} commit(s) on top)`);
+}
+
+// Forks that publish pi-dev: the published branch is the source of truth, so
+// pi-dev moves to origin/pi-dev (fast-forward, or a reset when every local
+// commit is already there by patch, i.e. the fork was rebased), and upstream is
+// re-pinned to where pi-dev branches off origin/<track>. Nothing is rebased
+// here: rebasing onto a newer upstream happens on the fork and is pushed.
+function pullPiDev(pkg, dir, toRef) {
+  const label = toRef ?? "origin/pi-dev";
+  if (!gitOk(dir, "rev-parse", "-q", "--verify", `${label}^{commit}`)) die(`vendor/${pkg.name}: no ${label}`);
+  const target = git(dir, "rev-parse", `${label}^{commit}`);
+  const local = git(dir, "rev-parse", "pi-dev");
+  const state = relation(dir, local, target);
+  if (state === "behind") {
+    git(dir, "merge", "-q", "--ff-only", target);
+  } else if (state === "ahead") {
+    console.log(`${pkg.name}: pi-dev is ${git(dir, "rev-list", "--count", `${target}..${local}`)} commit(s) ahead of ${label} — push it`);
+  } else if (state === "diverged") {
+    const unique = uniqueCommits(dir, target, local);
+    if (unique > 0) {
+      die(`vendor/${pkg.name}: pi-dev has ${unique} commit(s) not in ${label} — rebase them onto it (git -C vendor/${pkg.name} rebase ${label}) and push`);
+    }
+    git(dir, "reset", "-q", "--keep", target);
+  }
+  if (state !== "current" && state !== "ahead") console.log(`${pkg.name}: pi-dev ${local.slice(0, 12)} -> ${target.slice(0, 12)} (${label})`);
+
+  const track = `origin/${pkg.track}`;
+  const old = git(dir, "rev-parse", "upstream");
+  const base = spawnSync("git", ["-C", dir, "merge-base", "pi-dev", track], { encoding: "utf-8" }).stdout.trim();
+  if (!base) die(`vendor/${pkg.name}: pi-dev shares no history with ${track}`);
+  if (base !== old) {
+    if (!gitOk(dir, "merge-base", "--is-ancestor", old, base)) {
+      die(`vendor/${pkg.name}: pi-dev now branches off ${base.slice(0, 12)}, not a fast-forward of upstream ${old.slice(0, 12)}`);
+    }
+    git(dir, "update-ref", "refs/heads/upstream", base, old);
+    pkg.base = base;
+    pkg.version = git(dir, "describe", "--tags", "--always", base);
+    writeManifest();
+    console.log(`${pkg.name}: upstream ${old.slice(0, 12)} -> ${base.slice(0, 12)} (${pkg.version})`);
+  } else if (state === "current") {
+    console.log(`${pkg.name}: up to date (${label}, ${pkg.version})`);
+  }
+  console.log(`${pkg.name}: ${git(dir, "rev-list", "--count", "upstream..pi-dev")} commit(s) of ours on pi-dev`);
 }
 
 // --- build ----------------------------------------------------------------------

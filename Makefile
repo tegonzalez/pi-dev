@@ -54,17 +54,18 @@ vendor: ## Clone missing vendor/ repos; check pins and pi-dev branches
 vendor-status: ## Pin, our commits, dirty state, and upstream lag per package
 	@$(VENDOR) status --fetch
 
-deps: ## Compare every pin to latest release (tegonzalez forks: origin HEAD)
+deps: ## Compare every pin to latest release (tegonzalez forks: origin HEAD or pi-dev)
 	@$(VENDOR) check
 
 # PKG="a b" limits the set. Reference-only clones are skipped unless named.
 # Then: make install.
-deps-update: ## Move stack pins to latest release or fork HEAD, rebase pi-dev
+deps-update: ## Move stack pins to latest release or fork HEAD, rebase pi-dev; pull fork pi-dev
 	@$(VENDOR) latest $(PKG)
 
 # PKG="a b" names the packages (required); TO=<ref> (with one PKG) overrides
-# the follow target. Default target is the latest release tag, or origin/<track>
-# for packages with "follow": "head". Then: make install.
+# the follow target. Default target is the latest release tag, origin/<track>
+# for packages with "follow": "head", or origin/pi-dev with "follow": "pi-dev"
+# (pi-dev fast-forwards to it; origin/<track> is not pulled). Then: make install.
 vendor-update: ## Fast-forward one pin to its follow target (PKG=.. [TO=..])
 	@$(VENDOR) update $(PKG) $(if $(TO),--to $(TO))
 
